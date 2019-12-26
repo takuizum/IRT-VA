@@ -1,0 +1,97 @@
+## README file corresponding to submitted code for "Variational Approximations for Generalized Linear Latent Variable Models" by Hui et al.   
+## Note that rather than using the update algorithms provided in the main text, we instead all model parameters (\beta_{01},\ldots,\beta_{0m}, \bm{beta}, \bm}{lambda}, \tau_1, \ldots, \tau_n, \phi_1, \ldots, \phi_m) at once, then all variational means (a_1, \ldots, a_n) at once, then apply the iterative update to the matrix A_i.    
+## The zip file "codeVAGLLVM.zip" contains the following R code:
+
+FILE							DESCRIPTION
+-------------------------------------------------------------------------------
+application-youthgratitude.R		This file contains code for fitting GLLVMs to the Youth Gratitude data using VA estimation, as discussed in the Section 6.2 of the main text.
+							
+simulation-binary.R				This file contains code simulating binary response datasets, and fitting GLLVMs to these simulationed datasets using various estimation methods, as discussed in Section 5.1 of the main text.
+  
+VA-GLLVM-template.R				This file contains template code for fitting GLLVMs using VA estimation, as discussed in the main manuscript.
+                      
+VA-Laplace-template.R			This file contains code for fitting GLLVMs via the Laplace approxiamtion, as discussed in Huber, P., Ronchetti, E., and Victoria-Feser, M. (2004). Estimation of generalized linear latent variable models. Journal of the Royal Statistical Society: Series B (Statistical Methodology), 66:893–908.
+
+-------------------------------------------------------------------------------
+
+VA-GLLVM-template.R -> glvm.va
+
+Description: Fits GLLVMs using the VA estimation discussed in the paper
+
+Usage: glvm.va(y, X = NULL, family = "poisson", num.lv = 2, max.iter = 200, eps = 1e-4, row.eff = FALSE, covmat.struc = "unstructured", trace = TRUE, plot = FALSE, sd.errors = FALSE, maxit = 10, diag.iter = 5)
+
+Arguments:
+
+y			A n*m response matrix.
+X			An optional n*p model matrix of matrix. 
+family			A string for the assumed distribution. Currently permits one of "poisson", "negative.binomial", "binomial", "ordinal".
+num.lv			Number of latent variables.
+max.iter		Maximum number of update iterations to perform.
+eps			Convergence criterion. Convergence is deemed to have been reached when the ratio of VA log-likelihoods between successive updates is less than 1-eps.
+row.eff			Boolean indicating whether an optional row effect should be included.
+covmat.struc		A string for the assumed covariance matrix, A_i, in Gaussian variational distibution. Currently permits one of "unstructured", "diagonal".
+trace			Boolean indicating whether to print results for each update.
+plot			Boolean indicating whether, if possible, to construct an ordination plot as updates are made.
+sd.errors		Boolean indicating whether standard errors for the model and varational parameters should be calculated after convergence.
+maxit			An integer indicating the maximum number of iterations to perform for all updates involving the general optimization routine (Quasi-Newton) optim.
+
+
+Output:
+
+y, X, num.lv	As per the arguments entered (please see above)
+row.eff, 
+family,
+covmat.struc
+
+beta			Matrix of column-specific intercepts and regression coefficients relating to X.
+iter			Number of iterations performed.
+logLik			VA log-likelihood value at convergence.
+A			The estimated covariance matrices in the Gaussian variational distribution. Is a list of covmat.struc == "unstructured" and a n*num.lv matrix if covmat.struc == "diagonal".
+lambds			Matrix of regression coefficients relating to the latent variables.
+lvs			Matrix of predicted latent variables.
+phi			Vector of column-specific overdipersion parameters if family == "negative.binomial".
+row.params		Vector of row parameters if row.eff == TRUE.
+zeta			Matrix of cutoffs if family == "ordinal"
+se			A list containing standard errors for the parameters, if sd.errors = TRUE.
+
+-------------------------------------------------------------------------------
+
+
+VA-Laplace-template.R -> glvm.laplace
+
+Description: Fits GLLVMs using the Laplace approximation discussed in Huber et al. (2004).
+
+Usage: glvm.laplace <- function(y, X = NULL, num.lv = 2, family = "poisson", row.eff = TRUE, max.iter = 100, eps = 1e-4, trace = FALSE, seed = NULL, plot = FALSE, maxit = 100, info = FALSE)
+
+Arguments:
+
+y			A n*m response matrix.
+X			An optional n*p model matrix of matrix. 
+num.lv			Number of latent variables.
+family			A string for the assumed distribution. Currently permits one of "poisson", "negative.binomial", "binomial".
+row.eff			Boolean indicating whether an optional row effect should be included.
+max.iter		Maximum number of update iterations to perform.
+eps			Convergence criterion. Convergence is deemed to have been reached when the ratio of VA log-likelihoods between successive updates is less than 1-eps.
+trace			Boolean indicating whether to print results for each update.
+seed			An integer to set the seed to replication results. Defaults to a random seed.
+plot			Boolean indicating whether, if possible, to construct an ordination plot as updates are made.
+maxit			An integer indicating the maximum number of iterations to perform for all updates involving the general optimization routine (Quasi-Newton) optim.
+info			Boolean indicating whether the information matrix for the model parameters should be calculated after convergence, based on numerical differentation.
+
+
+Output:
+
+y, X, num.lv	As per the arguments entered (please see above)
+row.eff, 
+family,
+
+beta0			Vector of column-specific
+beta			Matrix of column-specific regression coefficients relating to X, if appropriate.
+iter			Number of iterations performed.
+logLik			Laplace log-likelihood value at convergence.
+lambda			Matrix of regression coefficients relating to the latent variables.
+lvs			Matrix of predicted latent variables.
+phi			Vector of column-specific overdipersion parameters if family == "negative.binomial".
+row.params		Vector of row parameters if row.eff == TRUE.
+info			The negative Hessian (observed information) for the model paramters, if info == TRUE
+se 			Asymptotic standard errors, based on the square-root of the inverse of the info
