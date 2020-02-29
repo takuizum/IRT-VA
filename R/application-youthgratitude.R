@@ -25,3 +25,12 @@ fit.va2 <- glvm.va(y = grat, X = as.matrix(as.numeric(agegroup2)-1), family = "o
 plot(fit.va2$lvs, col = as.numeric(YouthGratitude$agegroup), xlab = "LV1", ylab = "LV2", main = "B: Residual ordination of youths")
 legend("topleft", col = unique(as.numeric(YouthGratitude$agegroup)), pch = 1, legend = levels(YouthGratitude$agegroup))
 
+# Test
+
+fit.va <- glvm.va(y = grat, X = matrix(1, nrow = nrow(grat), 1), family = "ordinal", num.lv = 3, row.eff = FALSE, eps = .1, covmat.struc = "diagonal", plot = FALSE, maxit = 10)
+str(fit.va)
+
+fit.va$beta
+fit.va$lambda
+fit.va$zeta
+fit.va$lvs # thetaのスケールを固定できない...

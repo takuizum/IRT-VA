@@ -10,11 +10,25 @@ library(mvabund)
 library(MASS)
 library(Matrix)
 
-glvm.va <- function(y, X = NULL, family = "poisson", num.lv = 2, max.iter = 200, eps = 1e-4, row.eff = FALSE, covmat.struc = "unstructured", trace = TRUE, plot = FALSE, sd.errors = FALSE, maxit = 100) {
-     n<-dim(y)[1]; p<-dim(y)[2]; 	
-     num.X <- 0
+glvm.va <- function(y, # Response matrix n*m
+					X = NULL, # Optional, n*p matrix => factor structure?
+					family = "poisson", 
+					num.lv = 2, # n of factor
+					max.iter = 200, # mac iter of update iteration to perform
+					eps = 1e-4, # convergence criterion
+					row.eff = FALSE, # optional row effect
+					covmat.struc = "unstructured", # or "diagonal"
+					trace = TRUE, # Do you want to indicate estimation log?
+					plot = FALSE, 
+					sd.errors = FALSE, # se for model
+					maxit = 100 # Max iter to parform for all updates involving Quasi-Newton
+					) {
+     n<-dim(y)[1]; p<-dim(y)[2]; # nは受験者数，pは観測変数（項目）数
+	 num.X <- 0
+	 # predictor が指定する場合には行列に変換してnum.Xにその数（列数）を入れる。そうでなければ0が指定される。
      if(!is.null(X)) { X <- as.matrix(X); num.X <- dim(X)[2] } ## no of predictors
 
+	 # 使えるfamilyはpoisson, neg.binomial, binomial, ordinal （これは論文で提案されている手法に一致しているようだ）
      if(!(family %in% c("poisson","negative.binomial","binomial","ordinal"))) 
 		stop("Inputed family not allowed...sorry =(")
 	if(!(covmat.struc %in% c("unstructured","diagonal"))) 
@@ -28,10 +42,12 @@ glvm.va <- function(y, X = NULL, family = "poisson", num.lv = 2, max.iter = 200,
 	if(is.null(colnames(y))) colnames(y) <- paste("Col",1:p,sep="")
 	if(!is.null(X)) if(is.null(colnames(X))) colnames(X) <- paste("x",1:ncol(X),sep="")
 
-	if(!is.null(X)) X <- as.matrix(X)
+	if(!is.null(X)) X <- as.matrix(X)# 不要？
 	if(family == "ordinal") { 
-		max.levels <- apply(y,2,max); 
-		if(any(max.levels == 1) || all(max.levels == 2)) stop("Ordinal data requires all columns to have at least has two levels. If all columns only have two levels, please use family == binomial instead. Thanks") }
+		max.levels <- apply(y,2,max); #最大カテゴリ数を取得
+		# どうやら現状だと複数のfamilyを同時にはサポートしていない。 => inefficientなだけで，2パラとGRMの混合推定はできそう？
+		if(any(max.levels == 1) || all(max.levels == 2)) stop("Ordinal data requires all columns to have at least has two levels. If all columns only have two levels, please use family == binomial instead. Thanks") 
+	}
 	
 
 	## Get initial starting values by fitting a bunch of GLMs
@@ -39,17 +55,24 @@ glvm.va <- function(y, X = NULL, family = "poisson", num.lv = 2, max.iter = 200,
 	new.beta0 <- beta0 <- res$params[,1]
 	new.beta <- beta <- NULL; if(!is.null(X)) new.beta <- beta <- res$params[,2:(num.X+1)];
 	new.row.params <- row.params <- NULL; if(row.eff) new.row.params <- row.params <- rep(0,n)
+	# means <- 変分分布の平均
+	# lambda <- 識別力
+	# vacov <- 
 	new.vameans <- vameans <- new.lambda <- lambda <- new.vacov <- vacov <- NULL
 
 	if(num.lv > 0) {
 		new.vameans <- vameans <- res$index; 
 		new.lambda <- lambda <- as.matrix(res$params[,(ncol(res$params)-num.lv+1):ncol(res$params)]);
-		new.lambda[upper.tri(new.lambda)] <- lambda[upper.tri(lambda)] <- 0
+		new.lambda[upper.tri(new.lambda)] <- lambda[upper.tri(lambda)] <- 0 # おそらく識別のための制約
 		if(covmat.struc == "unstructured") { 
-			new.vacov <- vacov <- array(NA,dim=c(n,num.lv,num.lv)); 
-			for(i in 1:n) { new.vacov[i,,] <- vacov[i,,] <- diag(rep(1,num.lv)) }
+			new.vacov <- vacov <- array(NA,dim=c(n,num.lv,num.lv)); # 受験者ごとにcovmatを作る。
+			for(i in 1:n) { 
+				new.vacov[i,,] <- vacov[i,,] <- diag(rep(1,num.lv)) 
+				}
 			}
-		if(covmat.struc == "diagonal") { new.vacov <- vacov <- matrix(1,n,num.lv); }
+		if(covmat.struc == "diagonal") { 
+			new.vacov <- vacov <- matrix(1,n,num.lv); 
+			}
 		zero.cons <- which(new.lambda == 0) 
 		}
 
@@ -541,9 +564,10 @@ start.values.va <- function(y, X = NULL, family, trial.size = 1, num.lv = 0) {
 
 	
      y <- as.matrix(y)
-	if(family == "ordinal") { 
-		max.levels <- apply(y,2,max); 
-		if(any(max.levels == 1) || all(max.levels == 2)) stop("Ordinal data requires all columns to have at least has two levels. If all columns only have two levels, please use family == binomial instead. Thanks") }
+	if (family == "ordinal") {
+	    max.levels <- apply(y, 2, max)
+	    if (any(max.levels == 1) || all(max.levels == 2)) stop("Ordinal data requires all columns to have at least has two levels. If all columns only have two levels, please use family == binomial instead. Thanks")
+	}
 	if(is.null(rownames(y))) rownames(y) <- paste("row",1:n,sep="")
 	if(is.null(colnames(y))) colnames(y) <- paste("col",1:p,sep="")
 
@@ -561,11 +585,13 @@ start.values.va <- function(y, X = NULL, family, trial.size = 1, num.lv = 0) {
 	
 	if(family == "ordinal") {
 		max.levels <- max(y)
-		params <- matrix(NA,p,ncol(cbind(1,X,index)))
-		zeta <- matrix(NA,p,max.levels-1) ## max.levels
+		params <- matrix(NA,p,ncol(cbind(1,X,index))) # lambda?
+		zeta <- matrix(NA,p,max.levels-1) ## max.levels # beta?
 		zeta[,1] <- 0 ## polr parameterizes as no intercepts and all cutoffs vary freely. Change this to free intercept and first cutoff to zero 
 
 		for(j in 1:p) {  
+			# 素点を低い順に並べて，そこに-3から3の仮のパラメタを与え(index)，orderd logisticを実行して，それを項目の初期値計算に使う。
+			# 戻り値のパラメトリゼーションは，`logit P(Y <= k | x) = zeta_k - eta`
 			y.fac <- factor(y[,j]); 
 			if(length(levels(y.fac)) > 2) { 
 				if(!is.null(X) & num.lv > 0) cw.fit <- polr(y.fac ~ X+index, method = "probit")
@@ -585,12 +611,13 @@ start.values.va <- function(y, X = NULL, family, trial.size = 1, num.lv = 0) {
 			} 
 		}
 
-     out <- list(params=params,phi=phi)
+     out <- list(params=params,phi=phi) # phiはordinalではNULL(only overdispersed counts model)
 	if(num.lv > 0) out$index <- index
      if(family == "ordinal") out$zeta <- zeta
      options(warn = 0)
      
-     return(out) }
+     return(out) 
+}
 
      
      
@@ -991,50 +1018,73 @@ calc.infomat <- function(theta = NULL, beta0, beta = NULL, row.params = NULL, va
 		}
 
 		
-	zero.cons <- which(theta==0)
-	if(family == "ordinal") {
-		zeta2 <- as.vector(t(zeta[,-1]))
-		find.na.zeta <- which(is.na(zeta2)); if(length(find.na.zeta) > 0) zeta2 <- zeta2[-find.na.zeta] 
-		}
-	if(family != "ordinal") { zeta2 <- NULL }
+	zero.cons <- which(theta == 0)
+	if (family == "ordinal") {
+	    zeta2 <- as.vector(t(zeta[, -1]))
+	    find.na.zeta <- which(is.na(zeta2))
+	    if (length(find.na.zeta) > 0) zeta2 <- zeta2[-find.na.zeta]
+	}
+	if (family != "ordinal") {
+	    zeta2 <- NULL
+	}
 	
- 	A.mat <- -nd2(x0=c(theta,beta0,beta,row.params,phi,zeta2), f = grad.all.mod, vameans=vameans, lambda = lambda) 
- 	if(length(zero.cons) > 0) { A.mat <- A.mat[-zero.cons,]; A.mat <- A.mat[,-zero.cons] }
+	A.mat <- -nd2(x0 = c(theta, beta0, beta, row.params, phi, zeta2), f = grad.all.mod, vameans = vameans, lambda = lambda)
+	if (length(zero.cons) > 0) {
+	    A.mat <- A.mat[-zero.cons, ]
+	    A.mat <- A.mat[, -zero.cons]
+	}
 	dim(A.mat)
  	
  	
  	if(num.lv > 0) {
-		D.mat.fun <- function(i3) {
-			if(Lambda.struc == "unstructured") { lambda.i <- lambda[i3,,][lower.tri(lambda[i3,,],diag=T)] } 				
-			if(Lambda.struc == "diagonal") { lambda.i <- lambda[i3,]; }
-
-			return(-nd2(f = grad.all.var, x0=c(vameans[i3,],lambda.i), vameans = vameans, lambda = lambda, mod.x = c(theta,beta0,beta,row.params,phi,zeta2), sel.i = i3)) }
+        D.mat.fun <- function(i3) {
+            if (Lambda.struc == "unstructured") {
+                lambda.i <- lambda[i3, , ][lower.tri(lambda[i3, , ], diag = T)]
+            }
+            if (Lambda.struc == "diagonal") {
+                lambda.i <- lambda[i3, ]
+            }
+        
+            return(-nd2(f = grad.all.var, x0 = c(vameans[i3, ], lambda.i), vameans = vameans, lambda = lambda, mod.x = c(theta, beta0, beta, row.params, phi, zeta2), sel.i = i3))
+        }
 			
 		unique.ind <- which(!duplicated(y))
-		D.mat <- vector("list",n); 
-		for(k in 1:length(unique.ind)) { 
-			subD <- D.mat.fun(i3=unique.ind[k]); match.seq <- which(apply(y,1,identical,y[unique.ind[k],]) == 1) ## Unfortunately replace() only works if you want to replace elements with numerics	
-			for(k2 in match.seq) { D.mat[[k2]] <- subD } 
-			}  
-		#D.mat <- lapply(1:n,D.mat.fun)
-		D.mat <- as.matrix(bdiag(D.mat)); rm(subD)
-
-		B.mat <- vector("list",n)
-		for(i3 in 1:length(unique.ind)) {
-			#cat("Onto row",i3,"\n")
-			if(Lambda.struc == "unstructured") { lambda.i <- lambda[unique.ind[i3],,][lower.tri(lambda[unique.ind[i3],,],diag=T)] }
-			if(Lambda.struc == "diagonal") { lambda.i <- lambda[unique.ind[i3],]; }
-
-			#grad.all.var(x=c(vameans[i3,],lambda.i), vameans = vameans, lambda = lambda, mod.x = c(theta,beta0,beta,row.params,phi,zeta2), sel.i = i3)			
-			subB.mat <- -nd2(f = grad.all.cross, x0=c(vameans[unique.ind[i3],],lambda.i), vameans = vameans, lambda = lambda, mod.x = c(theta,beta0,beta,row.params,phi,zeta2), sel.i = unique.ind[i3]) 
-			if(length(zero.cons) > 0) { subB.mat <- subB.mat[-zero.cons,] } 
-			match.seq <- which(apply(y,1,identical,y[unique.ind[i3],]) == 1)
-			for(k2 in match.seq) { B.mat[[k2]] <- subB.mat } 
-			}
-		B.mat <- do.call(cbind,B.mat)
-			
-		cov.mat.mod <- ginv(A.mat-B.mat%*%solve(D.mat)%*%t(B.mat))
+		D.mat <- vector("list", n)
+		for (k in 1:length(unique.ind)) {
+		    subD <- D.mat.fun(i3 = unique.ind[k])
+		    match.seq <- which(apply(y, 1, identical, y[unique.ind[k], ]) == 1) ## Unfortunately replace() only works if you want to replace elements with numerics
+		    for (k2 in match.seq) {
+		        D.mat[[k2]] <- subD
+		    }
 		}
+		# D.mat <- lapply(1:n,D.mat.fun)
+		D.mat <- as.matrix(bdiag(D.mat))
+		rm(subD)
+
+		B.mat <- vector("list", n)
+		for (i3 in 1:length(unique.ind)) {
+		    # cat("Onto row",i3,"\n")
+		    if (Lambda.struc == "unstructured") {
+		        lambda.i <- lambda[unique.ind[i3], , ][lower.tri(lambda[unique.ind[i3], , ], diag = T)]
+		    }
+		    if (Lambda.struc == "diagonal") {
+		        lambda.i <- lambda[unique.ind[i3], ]
+		    }
+		
+		    # grad.all.var(x=c(vameans[i3,],lambda.i), vameans = vameans, lambda = lambda, mod.x = c(theta,beta0,beta,row.params,phi,zeta2), sel.i = i3)
+		    subB.mat <- -nd2(f = grad.all.cross, x0 = c(vameans[unique.ind[i3], ], lambda.i), vameans = vameans, lambda = lambda, mod.x = c(theta, beta0, beta, row.params, phi, zeta2), sel.i = unique.ind[i3])
+		    if (length(zero.cons) > 0) {
+		        subB.mat <- subB.mat[-zero.cons, ]
+		    }
+		    match.seq <- which(apply(y, 1, identical, y[unique.ind[i3], ]) == 1)
+		    for (k2 in match.seq) {
+		        B.mat[[k2]] <- subB.mat
+		    }
+		}
+		B.mat <- do.call(cbind, B.mat)
+		
+		cov.mat.mod <- ginv(A.mat - B.mat %*% solve(D.mat) %*% t(B.mat))
+	}
 		
 	if(num.lv == 0) cov.mat.mod <- ginv(A.mat)
 		
@@ -1081,42 +1131,53 @@ calc.infomat <- function(theta = NULL, beta0, beta = NULL, row.params = NULL, va
 	
 
 	
-## A function to compute highly accurate first-order derivatives 
-## From Fornberg and Sloan (Acta Numerica, 1994, p. 203-267; Table 1, page 213)  
+## A function to compute highly accurate first-order derivatives
+## From Fornberg and Sloan (Acta Numerica, 1994, p. 203-267; Table 1, page 213)
 nd2 <- function(x0, f, m = NULL, D.accur = 2, ...) {
-	D.n <- length(x0)
-	if(is.null(m)) { D.f0 <- f(x0, ...); m <- length(D.f0) }
-	if(D.accur == 2) { D.w <- tcrossprod(rep(1,m), c(-1/2,1/2)); D.co <- c(-1, 1) }
-  	else {
-    		D.w <- tcrossprod(rep(1,m), c(1/12, -2/3, 2/3, -1/12))
-    		D.co <- c(-2, -1, 1, 2) }
-  	D.n.c <- length(D.co)
-  	macheps <- .Machine$double.eps
-  	D.h <- macheps^(1/3)*abs(x0)
-  	D.deriv <- matrix(NA, nrow = m, ncol = D.n)
-  	
-	for (ii in 1:D.n) {
-    		D.temp.f <- matrix(0, m, D.n.c)
-    		for (jj in 1:D.n.c) {
-      			D.xd <- x0 + D.h[ii]*D.co[jj]*(1:D.n == ii)
-      			D.temp.f[,jj] <- f( D.xd, ...) }
-    		D.deriv[,ii] <- rowSums(D.w*D.temp.f)/D.h[ii] 
-  		}
-  	return(D.deriv) 
-  	}
-		
-		
-vacov.convert <- function(vacov,type=1) {
-	if(type == 1) { ## Convert unstructured to diagonal
-		n <- dim(vacov)[1]
-		vacov2 <- matrix(1,dim(vacov)[1],dim(vacov)[3])
-		for(i in 1:n) { vacov2[i,] <- diag(vacov[i,,]) }
-		return(vacov2)
-		}
-	if(type == 2) { ## Convert diagonal to unstructured
-		n <- nrow(vacov)
-		vacov2 <- array(0,dim=c(nrow(vacov),ncol(vacov),ncol(vacov)))
-		for(i in 1:n) { diag(vacov2[i,,]) <- vacov[i,] }
-		return(vacov2)
-		}
-	}
+    D.n <- length(x0)
+    if (is.null(m)) {
+        D.f0 <- f(x0, ...)
+        m <- length(D.f0)
+    }
+    if (D.accur == 2) {
+        D.w <- tcrossprod(rep(1, m), c(-1 / 2, 1 / 2))
+        D.co <- c(-1, 1)
+    } else {
+        D.w <- tcrossprod(rep(1, m), c(1 / 12, -2 / 3, 2 / 3, -1 / 12))
+        D.co <- c(-2, -1, 1, 2)
+    }
+    D.n.c <- length(D.co)
+    macheps <- .Machine$double.eps
+    D.h <- macheps^(1 / 3) * abs(x0)
+    D.deriv <- matrix(NA, nrow = m, ncol = D.n)
+
+    for (ii in 1:D.n) {
+        D.temp.f <- matrix(0, m, D.n.c)
+        for (jj in 1:D.n.c) {
+            D.xd <- x0 + D.h[ii] * D.co[jj] * (1:D.n == ii)
+            D.temp.f[, jj] <- f(D.xd, ...)
+        }
+        D.deriv[, ii] <- rowSums(D.w * D.temp.f) / D.h[ii]
+    }
+    return(D.deriv)
+}
+
+
+vacov.convert <- function(vacov, type = 1) {
+    if (type == 1) { ## Convert unstructured to diagonal
+        n <- dim(vacov)[1]
+        vacov2 <- matrix(1, dim(vacov)[1], dim(vacov)[3])
+        for (i in 1:n) {
+            vacov2[i, ] <- diag(vacov[i, , ])
+        }
+        return(vacov2)
+    }
+    if (type == 2) { ## Convert diagonal to unstructured
+        n <- nrow(vacov)
+        vacov2 <- array(0, dim = c(nrow(vacov), ncol(vacov), ncol(vacov)))
+        for (i in 1:n) {
+            diag(vacov2[i, , ]) <- vacov[i, ]
+        }
+        return(vacov2)
+    }
+}
