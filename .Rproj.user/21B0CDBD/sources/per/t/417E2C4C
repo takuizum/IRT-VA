@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1577375050544.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "41458146",
+    "id" : "417E2C4C",
+    "lastKnownWriteTime" : 1577375427,
+    "last_content_update" : 1577375427590,
+    "path" : "~/local_Documents/IRTVA/R/application-youthgratitude.R",
+    "project_path" : "R/application-youthgratitude.R",
+    "properties" : {
+        "cursorPosition" : "16,0",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

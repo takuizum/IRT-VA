@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1577375053384.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "69857783",
+    "id" : "C644EEED",
+    "lastKnownWriteTime" : 1445295766,
+    "last_content_update" : 1445295766,
+    "path" : "~/local_Documents/IRTVA/R/VA-Laplace-template.R",
+    "project_path" : "R/VA-Laplace-template.R",
+    "properties" : {
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1577375052493.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2229970028",
+    "id" : "AD0F26AA",
+    "lastKnownWriteTime" : 1476494182,
+    "last_content_update" : 1476494182,
+    "path" : "~/local_Documents/IRTVA/R/VA-GLLVM-template.R",
+    "project_path" : "R/VA-GLLVM-template.R",
+    "properties" : {
+        "cursorPosition" : "36,19",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

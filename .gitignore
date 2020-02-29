@@ -1,4 +1,5 @@
-.Rproj.user
+.vscode/
+IRTVA.code-workspace
+IRTVA.Rproj
 .Rhistory
 .RData
-.Ruserdata
