@@ -13,6 +13,8 @@ sel.sub <- which(apply(grat,1,sum) == round(apply(grat,1,sum))) ## Remove some w
 grat <- grat[sel.sub,]
 dim(grat)
 
+, "data/grat.csv")
+
 fit.va <- glvm.va(y = grat, family = "ordinal", num.lv = 3, row.eff = FALSE, eps = 5, covmat.struc = "unstructured", plot = FALSE, maxit = 10) ## A larger eps is acceptable here given the size of the dataset. LVs don't change that much after 20 iterations anyway.
 
 plot(fit.va$lvs, col = as.numeric(YouthGratitude$agegroup), xlab = "LV1", ylab = "LV2", main = "A: Unconstrained ordination of youths")
@@ -27,7 +29,9 @@ legend("topleft", col = unique(as.numeric(YouthGratitude$agegroup)), pch = 1, le
 
 # Test
 
-fit.va <- glvm.va(y = grat, X = matrix(1, nrow = nrow(grat), 1), family = "ordinal", num.lv = 3, row.eff = FALSE, eps = .1, covmat.struc = "diagonal", plot = FALSE, maxit = 10)
+sample(c(0, 1), nrow(grat), replace = TRUE)
+
+fit.va <- glvm.va(y = grat, X = matrix(sample(c(0, 1), nrow(grat), replace = TRUE), nrow = nrow(grat), 1), family = "ordinal", num.lv = 3, row.eff = FALSE, eps = .1, covmat.struc = "diagonal", plot = FALSE, maxit = 10)
 str(fit.va)
 
 fit.va$beta

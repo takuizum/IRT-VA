@@ -389,21 +389,22 @@ start.values.va <- function(y, X = NULL, family, trial.size = 1, num.lv = 0) {
 		rs <- factor(rs, labels = 1:len.uni)
 		rs <- as.numeric(levels(rs))[as.integer(rs)]
 		index <- matrix(seq(-3, 3, len = len.uni)[rs], ncol=1)
-		if(num.lv > 1) { index <- cbind(index,rmvnorm(nrow(index),rep(0,num.lv-1))) }		
-		unique.index <- as.matrix(index[unique.ind,]) ## Construct the starting latent variables in a ``clever" way
+		if (num.lv > 1) {
+		    index <- cbind(index, rmvnorm(nrow(index), rep(0, num.lv - 1)))
+		}
+		unique.index <- as.matrix(index[unique.ind, ]) ## Construct the starting latent variables in a ``clever" way
 		}
 	if(num.lv == 0) { index <- NULL }
 
-	
-     y <- as.matrix(y)
-	if(family == "ordinal") { 
-		max.levels <- apply(y,2,max); 
-		if(any(max.levels == 1) || all(max.levels == 2)) stop("Ordinal data requires all columns to have at least has two levels. If all columns only have two levels, please use family == binomial instead. Thanks") }
-	if(is.null(rownames(y))) rownames(y) <- paste("row",1:n,sep="")
+    y <- as.matrix(y)
+	if (family == "ordinal") {
+	    max.levels <- apply(y, 2, max)
+	    if (any(max.levels == 1) || all(max.levels == 2)) stop("Ordinal data requires all columns to have at least has two levels. If all columns only have two levels, please use family == binomial instead. Thanks")
+	}
+	if (is.null(rownames(y))) rownames(y) <- paste("row", 1:n, sep = "")
 	if(is.null(colnames(y))) colnames(y) <- paste("col",1:p,sep="")
 
-	
-     options(warn = -1)
+    options(warn = -1)
 
 	if(family != "ordinal") { ## Using logistic instead of probit regession here for binomial
 		if(!is.null(X) & num.lv > 0) fit.mva <- manyglm(y~X+index,family=family,K=trial.size)  
@@ -412,7 +413,11 @@ start.values.va <- function(y, X = NULL, family, trial.size = 1, num.lv = 0) {
 		if(is.null(X) & num.lv == 0) fit.mva <- manyglm(y~1,family=family,K=trial.size)  
 		params <- t(fit.mva$coef) 
 		}
-	if(family == "negative.binomial") { phi <- fit.mva$phi } else { phi <- NULL }
+	if (family == "negative.binomial") {
+	    phi <- fit.mva$phi
+	} else {
+	    phi <- NULL
+	}
 	
 	if(family == "ordinal") {
 		max.levels <- max(y)
@@ -442,12 +447,12 @@ start.values.va <- function(y, X = NULL, family, trial.size = 1, num.lv = 0) {
 			} 
 		}
 
-     out <- list(params=params,phi=phi) # phiはordinalではNULL(only overdispersed counts model)
+    out <- list(params=params,phi=phi) # phiはordinalではNULL(only overdispersed counts model)
 	if(num.lv > 0) out$index <- index
-     if(family == "ordinal") out$zeta <- zeta
-     options(warn = 0)
+    if(family == "ordinal") out$zeta <- zeta
+    options(warn = 0)
      
-     return(out) 
+    return(out) 
 }
 
      
