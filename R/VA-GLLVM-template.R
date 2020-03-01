@@ -543,80 +543,91 @@ glvm.va <- function(y, # Response matrix n*m
 	
 ## Starting values by fitting marginal GLMs
 start.values.va <- function(y, X = NULL, family, trial.size = 1, num.lv = 0) {
-     N <- nrow(y); p <- ncol(y)
-     y <- as.matrix(y)
-     if(!is.numeric(y)) 
-		stop("y must a numeric. If ordinal data, please convert to numeric with lowest level equal to 1. Thanks")
-	if(!(family %in% c("poisson","negative.binomial","binomial","ordinal"))) 
-		stop("inputed family not allowed...sorry =(")
+    N <- nrow(y)
+    p <- ncol(y)
+    y <- as.matrix(y)
+    if (!is.numeric(y)) {
+          stop("y must a numeric. If ordinal data, please convert to numeric with lowest level equal to 1. Thanks")
+      }
+    if (!(family %in% c("poisson", "negative.binomial", "binomial", "ordinal"))) {
+          stop("inputed family not allowed...sorry =(")
+      }
 
-     if(num.lv > 0) { 
-		unique.ind <- which(!duplicated(y))
-		rs <- as.vector(rowSums(y, na.rm = TRUE))
-		len.uni <- length(unique(rs))
-		rs <- factor(rs, labels = 1:len.uni)
-		rs <- as.numeric(levels(rs))[as.integer(rs)]
-		index <- matrix(seq(-3, 3, len = len.uni)[rs], ncol=1)
-		if(num.lv > 1) { index <- cbind(index,rmvnorm(nrow(index),rep(0,num.lv-1))) }		
-		unique.index <- as.matrix(index[unique.ind,]) ## Construct the starting latent variables in a ``clever" way
-		}
-	if(num.lv == 0) { index <- NULL }
+    if (num.lv > 0) {
+        unique.ind <- which(!duplicated(y))
+        rs <- as.vector(rowSums(y, na.rm = TRUE))
+        len.uni <- length(unique(rs))
+        rs <- factor(rs, labels = 1:len.uni)
+        rs <- as.numeric(levels(rs))[as.integer(rs)]
+        index <- matrix(seq(-3, 3, len = len.uni)[rs], ncol = 1)
+        if (num.lv > 1) {
+            index <- cbind(index, rmvnorm(nrow(index), rep(0, num.lv - 1)))
+        }
+        unique.index <- as.matrix(index[unique.ind, ]) ## Construct the starting latent variables in a ``clever" way
+    }
+    if (num.lv == 0) {
+        index <- NULL
+    }
 
-	
-     y <- as.matrix(y)
-	if (family == "ordinal") {
-	    max.levels <- apply(y, 2, max)
-	    if (any(max.levels == 1) || all(max.levels == 2)) stop("Ordinal data requires all columns to have at least has two levels. If all columns only have two levels, please use family == binomial instead. Thanks")
-	}
-	if(is.null(rownames(y))) rownames(y) <- paste("row",1:n,sep="")
-	if(is.null(colnames(y))) colnames(y) <- paste("col",1:p,sep="")
 
-	
-     options(warn = -1)
+    y <- as.matrix(y)
+    if (family == "ordinal") {
+        max.levels <- apply(y, 2, max)
+        if (any(max.levels == 1) || all(max.levels == 2)) stop("Ordinal data requires all columns to have at least has two levels. If all columns only have two levels, please use family == binomial instead. Thanks")
+    }
+    if (is.null(rownames(y))) rownames(y) <- paste("row", 1:n, sep = "")
+    if (is.null(colnames(y))) colnames(y) <- paste("col", 1:p, sep = "")
 
-	if(family != "ordinal") { ## Using logistic instead of probit regession here for binomial
-		if(!is.null(X) & num.lv > 0) fit.mva <- manyglm(y~X+index,family=family,K=trial.size)  
-		if(is.null(X) & num.lv > 0) fit.mva <- manyglm(y~index,family=family,K=trial.size)  
-		if(!is.null(X) & num.lv == 0) fit.mva <- manyglm(y~X,family=family,K=trial.size)  
-		if(is.null(X) & num.lv == 0) fit.mva <- manyglm(y~1,family=family,K=trial.size)  
-		params <- t(fit.mva$coef) 
-		}
-	if(family == "negative.binomial") { phi <- fit.mva$phi } else { phi <- NULL }
-	
-	if(family == "ordinal") {
-		max.levels <- max(y)
-		params <- matrix(NA,p,ncol(cbind(1,X,index))) # lambda?
-		zeta <- matrix(NA,p,max.levels-1) ## max.levels # beta?
-		zeta[,1] <- 0 ## polr parameterizes as no intercepts and all cutoffs vary freely. Change this to free intercept and first cutoff to zero 
 
-		for(j in 1:p) {  
-			# 素点を低い順に並べて，そこに-3から3の仮のパラメタを与え(index)，orderd logisticを実行して，それを項目の初期値計算に使う。
-			# 戻り値のパラメトリゼーションは，`logit P(Y <= k | x) = zeta_k - eta`
-			y.fac <- factor(y[,j]); 
-			if(length(levels(y.fac)) > 2) { 
-				if(!is.null(X) & num.lv > 0) cw.fit <- polr(y.fac ~ X+index, method = "probit")
-				if(is.null(X) & num.lv > 0) cw.fit <- polr(y.fac ~ index, method = "probit") 
-				if(!is.null(X) & num.lv == 0) cw.fit <- polr(y.fac ~ X, method = "probit")
-				if(is.null(X) & num.lv == 0) cw.fit <- polr(y.fac ~ 1, method = "probit") 
-				params[j,] <- c(cw.fit$zeta[1],-cw.fit$coefficients) 
-				zeta[j,2:length(cw.fit$zeta)] <- cw.fit$zeta[-1]-cw.fit$zeta[1] 
-				}
-			if(length(levels(y.fac)) == 2) {				
-				if(!is.null(X) & num.lv > 0) cw.fit <- glm(y.fac ~ X+index, family = binomial(link = "probit"))
-				if(is.null(X) & num.lv > 0) cw.fit <- glm(y.fac ~ index, family = binomial(link = "probit")) 
-				if(!is.null(X) & num.lv == 0) cw.fit <- glm(y.fac ~ X, family = binomial(link = "probit"))
-				if(is.null(X) & num.lv == 0) cw.fit <- glm(y.fac ~ 1, family = binomial(link = "probit")) 
-				params[j,] <- cw.fit$coef 
-				}
-			} 
-		}
+    options(warn = -1)
 
-     out <- list(params=params,phi=phi) # phiはordinalではNULL(only overdispersed counts model)
-	if(num.lv > 0) out$index <- index
-     if(family == "ordinal") out$zeta <- zeta
-     options(warn = 0)
-     
-     return(out) 
+    if (family != "ordinal") { ## Using logistic instead of probit regession here for binomial
+        if (!is.null(X) & num.lv > 0) fit.mva <- manyglm(y ~ X + index, family = family, K = trial.size)
+        if (is.null(X) & num.lv > 0) fit.mva <- manyglm(y ~ index, family = family, K = trial.size)
+        if (!is.null(X) & num.lv == 0) fit.mva <- manyglm(y ~ X, family = family, K = trial.size)
+        if (is.null(X) & num.lv == 0) fit.mva <- manyglm(y ~ 1, family = family, K = trial.size)
+        params <- t(fit.mva$coef)
+    }
+    if (family == "negative.binomial") {
+        phi <- fit.mva$phi
+    } else {
+        phi <- NULL
+    }
+
+    if (family == "ordinal") {
+        max.levels <- max(y)
+        params <- matrix(NA, p, ncol(cbind(1, X, index))) # lambda?
+        zeta <- matrix(NA, p, max.levels - 1) ## max.levels # beta?
+        zeta[, 1] <- 0 ## polr parameterizes as no intercepts and all cutoffs vary freely. Change this to free intercept and first cutoff to zero
+
+        for (j in 1:p) {
+            # 素点を低い順に並べて，そこに-3から3の仮のパラメタを与え(index)，orderd logisticを実行して，それを項目の初期値計算に使う。
+            # 戻り値のパラメトリゼーションは，`logit P(Y <= k | x) = zeta_k - eta`
+            y.fac <- factor(y[, j])
+            if (length(levels(y.fac)) > 2) {
+                if (!is.null(X) & num.lv > 0) cw.fit <- polr(y.fac ~ X + index, method = "probit")
+                if (is.null(X) & num.lv > 0) cw.fit <- polr(y.fac ~ index, method = "probit")
+                if (!is.null(X) & num.lv == 0) cw.fit <- polr(y.fac ~ X, method = "probit")
+                if (is.null(X) & num.lv == 0) cw.fit <- polr(y.fac ~ 1, method = "probit")
+                params[j, ] <- c(cw.fit$zeta[1], -cw.fit$coefficients) # Error!!!
+                zeta[j, 2:length(cw.fit$zeta)] <- cw.fit$zeta[-1] - cw.fit$zeta[1]
+            }
+            if (length(levels(y.fac)) == 2) {
+                if (!is.null(X) & num.lv > 0) cw.fit <- glm(y.fac ~ X + index, family = binomial(link = "probit"))
+                if (is.null(X) & num.lv > 0) cw.fit <- glm(y.fac ~ index, family = binomial(link = "probit"))
+                if (!is.null(X) & num.lv == 0) cw.fit <- glm(y.fac ~ X, family = binomial(link = "probit"))
+                if (is.null(X) & num.lv == 0) cw.fit <- glm(y.fac ~ 1, family = binomial(link = "probit"))
+                params[j, ] <- cw.fit$coef
+            }
+        }
+    }
+
+    out <- list(params = params, phi = phi) # phiはordinalではNULL(only overdispersed counts model)
+    if (num.lv > 0) out$index <- index
+    if (family == "ordinal") out$zeta <- zeta
+    options(warn = 0)
+
+    return(out)
 }
 
      

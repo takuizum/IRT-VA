@@ -68,8 +68,6 @@ res$zeta # beta (cutoff parameter)
 res$phi # NULL
 
 new.beta0 <- beta0 <- res$params[, 1]
-new.beta <- beta <- NULL
-if (!is.null(X)) new.beta <- beta <- res$params[, 2:(num.X + 1)] # なんらかの構造を仮定するのであれば，ここにも初期値を当てはめる。
 new.row.params <- row.params <- NULL
 # means <- 変分分布の平均
 # lambda <- 識別力

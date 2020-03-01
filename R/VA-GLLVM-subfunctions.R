@@ -484,7 +484,9 @@ start.values.va <- function(y, X = NULL, family, trial.size = 1, num.lv = 0) {
                 if (is.null(X) & num.lv > 0) cw.fit <- polr(y.fac ~ index, method = "probit")
                 if (!is.null(X) & num.lv == 0) cw.fit <- polr(y.fac ~ X, method = "probit")
                 if (is.null(X) & num.lv == 0) cw.fit <- polr(y.fac ~ 1, method = "probit")
-                params[j, ] <- c(cw.fit$zeta[1], -cw.fit$coefficients)
+                # cw.fit <- polr(y.fac ~ matrix(rnorm(nrow(index)), nrow(index), 2) + index, method = "probit")
+                # browser()
+                params[j, ] <- c(cw.fit$zeta[1], -cw.fit$coefficients) # Error
                 zeta[j, 2:length(cw.fit$zeta)] <- cw.fit$zeta[-1] - cw.fit$zeta[1]
             }
             if (length(levels(y.fac)) == 2) {
