@@ -30,6 +30,26 @@ function loglikelihood(τ, β₀, β, λ, ζ, μ, Σ, y, X)
     return lnp
 end
 
+
+function loglikelihoodⱼ(τ, β₀, β, λ, ζ, μ, y, X, qt)
+    J, K = size(ζ)
+    N = size(μ, 1)
+    # Calc eta
+    η = isnothing(X) ? μ * λ : X * β + μ * λ
+    for i in 1:N
+        η[i] += τ[i] + β₀
+    end
+    # Calc Loglikelihood
+    lnp = 0.0
+    for i in 1:N
+        lnp += log(pmf(η[i], ζ, y[i]))
+    end
+    # Calc quad term
+    # lnp += QuadTerm(λ, Σ, μ)
+    lnp += qt
+    return lnp
+end
+
 # Calculation 
 QuadTermSub(μ::AbstractArray{Float64, 1}, Σ::AbstractArray{Float64, 2}) = logdet(Σ) - tr(Σ) - μ'μ
 
