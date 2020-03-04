@@ -1,12 +1,12 @@
-struct StartingValues
-    τ
-    β₀
-    β
-    ζ
-    λ
-    μ
-    Σ
-end
+# struct StartingValues
+#     τ
+#     β₀
+#     β
+#     ζ
+#     λ
+#     μ
+#     Σ
+# end
 
 function CalcStartingValues(y, Numθ; X = nothing)
     # y in integer matrix
@@ -54,7 +54,7 @@ function CalcStartingValues(y, Numθ; X = nothing)
     σ = diagm(Numθ, Numθ, fill(1.0, Numθ))
     Σ = fill(σ, N)
     τ = fill(0.0, N)
-    return VAGradedItem(τ, β₀, β, ζ, λ, μ, Σ)
+    return τ, β₀, β, ζ, λ, μ, Σ
 end
 
 res = polr(a, y[:, 2], ProbitLink(), IpoptSolver()) # NLoptsolverだと計算されない。
