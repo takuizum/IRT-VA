@@ -12,14 +12,8 @@ using Optim, Distributions, StatsFuns, StatsBase, CategoricalArrays, Random, Ord
 # How to transform?
 pmf(η, ζ, k) = cdf(Normal(0,1), ζ[k+1] - η) - cdf(Normal(0,1), ζ[k] - η)
 
-function loglikelihood(τ, β₀, β, λ, ζ, μ, Σ, y, X)
-    J, K = size(ζ)
-    N = size(μ, 1)
-    # Calc eta
-    η = isnothing(X) ? μ * λ : X * β + μ * λ
-    for i in 1:N, j in 1:J
-        η[i, j] += τ[i] + β₀[j]
-    end
+function loglikelihood(λ, ζ, η, μ, Σ, y)
+    N, J = size(η)
     # Calc Loglikelihood
     lnp = 0.0
     for i in 1:N, j in 1:J
@@ -30,31 +24,26 @@ function loglikelihood(τ, β₀, β, λ, ζ, μ, Σ, y, X)
     return lnp
 end
 
-
-function loglikelihoodⱼ(τ, β₀, β, λ, ζ, μ, y, X, Σ)
+function loglikelihood_β(τ, β₀, β, λ, ζ, μ, Σ, y, X)
     K = size(ζ)
     N = size(μ, 1)
     # Calc eta
-    η = isnothing(X) ? μ * λ : X * β + μ * λ
-    η += τ .+ β₀
+    η = CalcEta(τ, β₀, β, λ, ζ, μ[:,:], X)
     # Calc Loglikelihood
     lnp = 0.0
     for i in 1:N
         lnp += log(pmf(η[i], ζ, y[i]))
     end
     # Calc quad term
-    lnp += QuadTermⱼ(λ, Σ, μ)
+    # lnp += QuadTermⱼ(λ, Σ, μ)
     return -lnp # minimize
 end
 
-# Unidim IRT
-function loglikelihoodⱼ(τ, β₀, β, λ, ζ, μ::AbstractArray{Float64, 1}, y, X, Σ)
+function loglikelihood_λ(τ, β₀, β, λ, ζ, μ, Σ, y, X)
     K = size(ζ)
     N = size(μ, 1)
     # Calc eta
-    η = isnothing(X) ? μ .* λ : X * β + μ .* λ
-    η += τ .+ β₀
-    # Calc Loglikelihood
+    η = CalcEta(τ, β₀, β, λ, ζ, μ[:,:], X)    # Calc Loglikelihood
     lnp = 0.0
     for i in 1:N
         lnp += log(pmf(η[i], ζ, y[i]))
@@ -85,14 +74,14 @@ function QuadTerm(λ, # ::AbstractArray{Float64, 2},
     return -0.5term1 + 0.5term2
 end
 
-# function QuadTerm(λ::AbstractArray{Float64, 2}, Σ::AbstractArray{Float64, 2}, μ::AbstractArray{Float64, 2})
-#     term1 = λ' * Σ * λ
-#     term2 = zero(Float64)
-#     for i in 1:size(μ, 2)
-#         term2 += sum(log(Σ[i,:])) - sum(diag(Σ[i,:])) -sum(μ[i,:] .^2)
-#     end
-#     return -0.5term1 + 0.5term2
-# end
+function QuadTerm(λ::AbstractArray{Float64, 2}, Σ::AbstractArray{Float64, 2}, μ::AbstractArray{Float64, 2})
+    term1 = λ' * Σ * λ
+    term2 = zero(Float64)
+    for i in 1:size(μ, 2)
+        term2 += sum(log(Σ[i,:])) - sum(diag(Σ[i,:])) -sum(μ[i,:] .^2)
+    end
+    return -0.5term1 + 0.5term2
+end
 
 function QuadTermⱼ(λ, # ::AbstractArray{Float64, 1}, 
                    Σ, # ::AbstractArray{Float64, 3}, 
@@ -107,4 +96,37 @@ function QuadTermⱼ(λ, # ::AbstractArray{Float64, 1},
         term2 += QuadTermSub(μ[i, :], Σ[i, :, :])
     end
     return -0.5term1 + 0.5term2
+end
+
+# Calcuration η matrix
+function CalcEta(τ, β₀, β, λ, ζ::AbstractArray{Float64, 2}, μ::AbstractArray{Float64, 2}, X)
+    J = size(ζ, 1)
+    N = size(μ, 1)
+    # Calc eta
+    η = isnothing(X) ? λ*μ' : β*X' + λ*μ'
+    for i in 1:N, j in 1:J
+        η[j, i] += τ[i] + β₀[j]
+    end
+    return η'
+end
+
+# In item j
+function CalcEta(τ, β₀, β, λ, ζ::AbstractArray{Float64, 1}, μ::AbstractArray{Float64, 2}, X)
+    N = size(μ, 1)
+    # Calc eta
+    η = isnothing(X) ? λ*μ' : β*X' + λ*μ'
+    for i in 1:N
+        η[i] += τ[i] + β₀
+    end
+    return η'
+end
+
+function loglikelihood_ζ(ζ, η, y)
+    N = size(y, 1)
+    ζ = [-Inf; ζ; Inf]
+    lnp = zero(eltype(η))
+    for i in 1:N
+        lnp += log(pmf(η[i], ζ, y[i]))
+    end
+    return -lnp
 end
