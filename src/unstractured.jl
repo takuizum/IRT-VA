@@ -8,6 +8,9 @@ struct GradedModel <: unstractured
     RowEffect::Bool
     ϵ
 end
+function GradedModel(y; d = 1, X = nothing, MaxIter = 100, RowEffect = true, ϵ = 1e-3)
+    GradedModel(y, X, d, MaxIter, RowEffect, ϵ)
+end
 
 function gradedVA(model::unstractured)
     #Starting values
@@ -20,13 +23,14 @@ function gradedVA(model::unstractured)
         qt = QuadTerm(λ, Σ, μ)
         for j in 1:J
             # update β₀
-            res_β₀ = optimize(x -> loglikelihoodⱼ(τ, x, β[j,:], λ[j,:], ζ[j,:], μ, y[:,j], X, qt), β₀[j], Brent(); autodiff=:forward)
+            res_β₀ = optimize(x -> loglikelihoodⱼ(τ, x, β[j,:], λ[j,:], ζ[j,:], μ, y[:,j], X, qt), β₀[j]-1.0, β₀[j]+1.0, Brent())
+            res_β₀.minimizer
             # update β
             if !isnothing(X)
                 res_β = optimize(x -> loglikelihoodⱼ(τ, β₀[j], x, λ[j,:], ζ[j,:], μ, y[:,j], X, qt), β[j, :], BFGS(); autodiff=:forward)
             end
             # update ζ (impose proper constraints not to reverse the adjacent category boundary parameters.)
-            # In Baker & Kim (2004), all of the ζ were estimated concurrently 
+            # In Baker & Kim (2004), all of the ζ were estimated concurrently 
             # update λ
             res_λ = optimize(x -> loglikelihoodⱼ(τ, β₀[j], β[j,:], x, ζ[j,:], μ, y[:,j], X, qt), λ[j, :], BFGS(); autodiff=:forward)
         end
@@ -35,7 +39,9 @@ function gradedVA(model::unstractured)
 
         # update Σ(closed form)
         
-        if(model.iter == model.MaxIter || diff < model.ϵ) break
+        if(model.iter == model.MaxIter || diff < model.ϵ) 
+            break
+        end
     end
 
 end

@@ -62,19 +62,19 @@ function CalcStartingValues(y, Numθ; X = nothing)
     return τ, β₀, β, ζ, λ, μ, Σ
 end
 
-res_l = polr(μ, y[:, 25], LogitLink()); # NLoptsolverだと計算されない。
-res_p = polr(μ, y[:, 25], ProbitLink()); # NLoptsolverだと計算されない。
+# res_l = polr(μ, y[:, 25], LogitLink()); # NLoptsolverだと計算されない。
+# res_p = polr(μ, y[:, 25], ProbitLink()); # NLoptsolverだと計算されない。
 
-res_p |> coeftable
-res_l |> coeftable
-res_p.β  # regression coefficient
-0.588res_l.β  # regression coefficient
-res_p.θ # intercept, satisfying `θ[1]≤...≤θ[J-1]`
-0.588res_l.θ # intercept, satisfying `θ[1]≤...≤θ[J-1]`
-res_p.η # 
-0.588res_l.η # 
-res_p.α # unconstrained parameterization of θ
-0.588res_l.α # unconstrained parameterization of θ
+# res_p |> coeftable
+# res_l |> coeftable
+# res_p.β  # regression coefficient
+# 0.588res_l.β  # regression coefficient
+# res_p.θ # intercept, satisfying `θ[1]≤...≤θ[J-1]`
+# 0.588res_l.θ # intercept, satisfying `θ[1]≤...≤θ[J-1]`
+# res_p.η # 
+# 0.588res_l.η # 
+# res_p.α # unconstrained parameterization of θ
+# 0.588res_l.α # unconstrained parameterization of θ
 
 
-length(unique(y[:, 25]))
+# length(unique(y[:, 25]))
