@@ -8,8 +8,9 @@
 #     Σ
 # end
 
+using DataFrames, Distributions, CategoricalArrays, Random, OrdinalMultinomialModels, LinearAlgebra, Statistics
+
 function CalcStartingValues(y, Numθ; X = nothing)
-    # y in integer matrix
     N, p = size(y)
     if isnothing(X)
         NumCovariates = 0
@@ -18,14 +19,14 @@ function CalcStartingValues(y, Numθ; X = nothing)
     end
     # Starting values of a(VA mean = mean of latent trauts)
     unique_ind = findall(x -> !x, nonunique(y)) # y is a dataframe that dosen't contain ID col
-    y = convert(Matrix{Int64}, y[!, Not(:ID)])
+    y = convert(Matrix{Int64}, y)
     rs = sum(y; dims = 2)[:]
     len_uni = length(unique(rs))
     rs = levelcode.(CategoricalArray(rs, ordered = true)) # ranking of raw score
     sortperm(rs)
     μ = range(-3, stop = 3, length = len_uni)[rs]
     if Numθ > 1
-        μ = hcat(μ, rand(MvNormal(ones(Numθ-1)), length(a))')
+        μ = hcat(μ, rand(MvNormal(ones(Numθ-1)), length(μ))')
     end
     # unique_μ = μ[unique_ind, :]
     # fit GLM
@@ -34,34 +35,46 @@ function CalcStartingValues(y, Numθ; X = nothing)
     β₀ = zeros(Float64, p)
     β = zeros(Float64, p, NumCovariates)
     λ = zeros(Float64, p, Numθ)
-    ζ = zeors(Float64, p, max_v+1)
-    ζ[:, 1] = -Inf
+    ζ = zeros(Float64, p, max_v+1)
+    ζ[:, 1] .= -Inf
+    D = 1/1.702
     for j in 1:p
+        println("Item", j)
+        # Logit Link, which is used in `polr` to fit orderd regression analysis, is more stable than ProbitLink in my experience.
         Kⱼ = length(unique(y[:, j]))
         if isnothing(X)
-            plfit = polr(μ, y[:, j], ProbitLink())
-            λ[j, :] = plfit.β
+            plfit = polr(μ, y[:, j], LogitLink())
+            λ[j, :] .= plfit.β .* D
         else
-            plfit = polr([a X], y[:, j], ProbitLink())
-            λ[j, :] = plfit.β[1:Numθ]
-            β[j, :] = plfit.β[(Numθ+1):end]
+            plfit = polr([μ X], y[:, j], LogitLink())
+            λ[j, :] .= plfit.β[1:Numθ] .* D
+            β[j, :] .= plfit.β[(Numθ+1):end] .* D
         end
-        β₀[j] = plfit.β[1]
-        λ[j, :] = plfit.β
-        ζ[j, 2:Kⱼ] = plfit.θ .- mean(plfit.θ)
-        ζ[j, Kⱼ:max_v+1] = Inf
+        β₀[j] = plfit.β[1] .* D
+        λ[j, :] .= plfit.β .* D
+        ζ[j, 2:Kⱼ] .= plfit.θ .* D #  .- mean(plfit.θ)
+        ζ[j, Kⱼ+1:max_v+1] .= Inf
     end
     σ = diagm(Numθ, Numθ, fill(1.0, Numθ))
-    Σ = fill(σ, N)
+    Σ = zeros(Float64, N, Numθ, Numθ)
+    map(i -> Σ[i, :, :] = σ, 1:N)
     τ = fill(0.0, N)
     return τ, β₀, β, ζ, λ, μ, Σ
 end
 
-res = polr(a, y[:, 2], ProbitLink(), IpoptSolver()) # NLoptsolverだと計算されない。
-tab = res |> coeftable
-res.β # regression coefficient
-res.θ # intercept, satisfying `θ[1]≤...≤θ[J-1]`
-res.η # 
-res.α # unconstrained parameterization of θ
+res_l = polr(μ, y[:, 25], LogitLink()); # NLoptsolverだと計算されない。
+res_p = polr(μ, y[:, 25], ProbitLink()); # NLoptsolverだと計算されない。
 
-# 
+res_p |> coeftable
+res_l |> coeftable
+res_p.β  # regression coefficient
+0.588res_l.β  # regression coefficient
+res_p.θ # intercept, satisfying `θ[1]≤...≤θ[J-1]`
+0.588res_l.θ # intercept, satisfying `θ[1]≤...≤θ[J-1]`
+res_p.η # 
+0.588res_l.η # 
+res_p.α # unconstrained parameterization of θ
+0.588res_l.α # unconstrained parameterization of θ
+
+
+length(unique(y[:, 25]))
