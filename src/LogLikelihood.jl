@@ -47,6 +47,23 @@ function loglikelihoodⱼ(τ, β₀, β, λ, ζ, μ, y, X, Σ)
     return -lnp # minimize
 end
 
+# Unidim IRT
+function loglikelihoodⱼ(τ, β₀, β, λ, ζ, μ::AbstractArray{Float64, 1}, y, X, Σ)
+    K = size(ζ)
+    N = size(μ, 1)
+    # Calc eta
+    η = isnothing(X) ? μ .* λ : X * β + μ .* λ
+    η += τ .+ β₀
+    # Calc Loglikelihood
+    lnp = 0.0
+    for i in 1:N
+        lnp += log(pmf(η[i], ζ, y[i]))
+    end
+    # Calc quad term
+    lnp += QuadTermⱼ(λ, Σ, μ)
+    return -lnp # minimize
+end
+
 # Calculation 
 QuadTermSub(μ::AbstractArray{Float64, 1}, Σ::AbstractArray{Float64, 2}) = logdet(Σ) - tr(Σ) - μ'μ
 

@@ -43,7 +43,7 @@ function CalcStartingValues(y, Numθ; X = nothing)
         # Logit Link, which is used in `polr` to fit orderd regression analysis, is more stable than ProbitLink in my experience.
         Kⱼ = length(unique(y[:, j]))
         if isnothing(X)
-            plfit = polr(μ, y[:, j], LogitLink())
+            plfit = polr(μ[:,:], y[:, j], LogitLink())
             λ[j, :] .= plfit.β .* D
         else
             plfit = polr([μ X], y[:, j], LogitLink())
