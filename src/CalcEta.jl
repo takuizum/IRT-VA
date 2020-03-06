@@ -21,7 +21,8 @@ function _CalcEta(τ, β₀, β, λ, ζ::AbstractArray{Float64, 1}, μ::Abstract
     return η'
 end
 
-function _CalcEta(τ, β₀, β, λ, ζ::AbstractArray{Float64, 2}, μ, X)
+# In person i
+function _CalcEta(τ::Float64, β₀, β, λ, ζ::AbstractArray{Float64, 2}, μ, X)
     J = size(ζ, 1)
     # Calc eta
     η = isnothing(X) ? λ*μ' : β*X' + λ*μ'

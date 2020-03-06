@@ -73,14 +73,14 @@ function ∂loglikelihood_ζ(ζ, η, y)
 end
 
 function loglikelihood_μ(τ, β₀, β, λ, ζ, μ, Σ, y, X)
-    J = size(β₀)
-    η = _CalcEta(τ, β₀, β, λ, ζ, μ, y, X)
+    J = size(β₀, 1)
+    η = _CalcEta(τ, β₀, β, λ, ζ, μ, X)
     # Calc Loglikelihood
     lnp = 0.0
     for j in 1:J
-        lnp += log(pmf(η, ζ[j,:], y[j]))
+        lnp += log(pmf(η[j], ζ[j,:], y[j]))
     end
     # Calc quad term
-    lnp += 0.5*(logdet(Σ) - tr(Σ) - μ'μ) - 0.5μ'Σ*μ 
+    lnp += 0.5*(logdet(Σ) - tr(Σ) - μ'μ) - (0.5μ'Σ*μ)[1]
     return -lnp # minimize
 end
