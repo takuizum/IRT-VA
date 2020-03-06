@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 struct GradedModel
-=======
-struct GradedModel 
->>>>>>> b48efc19327ea337f04fad793bbb7609fd80ae05
     y
     X
     d
@@ -20,7 +16,6 @@ function gradedVA(Model::GradedModel)
     newItem, newPerson = copy.([oldItem, oldPerson])
     # Initialize
     N, J = size(model.y)
-<<<<<<< HEAD
     for iter in 1:Model.MaxIter
         η = CalcEta(newItem, newPerson, Model.X)
         # Update the item parameters
@@ -28,19 +23,6 @@ function gradedVA(Model::GradedModel)
         # update τ and μ
         UpdateVariationalParameters(newItem, newPerson, Model)
         if(diff < Model.ϵ)
-=======
-    while(true)
-        η = CalcEta(newItem, newPerson, Model.X)
-        # Update the item parameters
-        UpdateModelParameters(newItem, newPerson, η, Model)
-
-        # update τ and μ
-        res_person = optimize(x -> loglikelihood(x, β₀, β, λ, ζ, μ, y, X), τ, LBFGS())
-
-        # update Σ(closed form)
-        
-        if(Model.iter == Model.MaxIter || diff < Model.ϵ) 
->>>>>>> b48efc19327ea337f04fad793bbb7609fd80ae05
             break
         end
     end
@@ -83,7 +65,6 @@ function UpdateModelParameters(Item, Person, η, Model; debug = false)
     return Item
 end
 
-<<<<<<< HEAD
 function UpdateVariationalParameters(Item::ItemParameters, Person::PersonParameters, Model::GradedModel)
     N, J = size(Model.y)
     # λ square term
@@ -97,8 +78,3 @@ function UpdateVariationalParameters(Item::ItemParameters, Person::PersonParamet
         Person.Σ[i,:,:] = inv(diagm(Model.d, Model.d, ones(Float64, Model.d)) + λλ)
     end
 end
-=======
-function UpdateVariatinalParameters
-    #
-end
->>>>>>> b48efc19327ea337f04fad793bbb7609fd80ae05
