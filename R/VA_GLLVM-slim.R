@@ -155,7 +155,7 @@ glvm.va <- function(y, # Response matrix n*m
 				mu.mat <- (y + phi.mat) * (phi.mat / (exp(eta.mat) + phi.mat))
 			}
 
-			# Update a for i in 1:n by fitting a penalized probit GLM
+			# Update A for i in 1:n by fitting a penalized probit GLM
 			for (i in 1:n) {
 				error <- 1
 				vacov.iter <- 0

@@ -1,6 +1,4 @@
-abstract type unstractured end
-
-struct GradedModel <: unstractured
+struct GradedModel 
     y
     X
     d
@@ -12,37 +10,65 @@ function GradedModel(y; d = 1, X = nothing, MaxIter = 100, RowEffect = true, ϵ 
     GradedModel(y, X, d, MaxIter, RowEffect, ϵ)
 end
 
-function gradedVA(model::unstractured)
+function gradedVA(Model::GradedModel)
     #Starting values
-    τ, β₀, β, ζ, λ, μ, Σ = StartingValues(model.y, model.d; X = model.X)
+    oldItem, oldPerson = CalcStartingValues(Model.y, Model.d);
+    newItem, newPerson = copy.([oldItem, oldPerson])
     # Initialize
     N, J = size(model.y)
-    y = model.y
-    X = model.X
     while(true)
-        qt = QuadTerm(λ, Σ, μ)
-        for j in 1:J
-            # update β₀
-            res_β₀ = optimize(x -> loglikelihoodⱼ(τ, x, β[j,:], λ[j,:], ζ[j,:], μ, y[:,j], X, qt), β₀[j]-1.0, β₀[j]+1.0, Brent())
-            res_β₀.minimizer
-            # update β
-            if !isnothing(X)
-                res_β = optimize(x -> loglikelihoodⱼ(τ, β₀[j], x, λ[j,:], ζ[j,:], μ, y[:,j], X, qt), β[j, :], BFGS(); autodiff=:forward)
-            end
-            # update ζ (impose proper constraints not to reverse the adjacent category boundary parameters.)
-            # In Baker & Kim (2004), all of the ζ were estimated concurrently 
-            # update λ
-            res_λ = optimize(x -> loglikelihoodⱼ(τ, β₀[j], β[j,:], x, ζ[j,:], μ, y[:,j], X, qt), λ[j, :], BFGS(); autodiff=:forward)
-        end
+        η = CalcEta(newItem, newPerson, Model.X)
+        # Update the item parameters
+        UpdateModelParameters(newItem, newPerson, η, Model)
+
         # update τ and μ
         res_person = optimize(x -> loglikelihood(x, β₀, β, λ, ζ, μ, y, X), τ, LBFGS())
 
         # update Σ(closed form)
         
-        if(model.iter == model.MaxIter || diff < model.ϵ) 
+        if(Model.iter == Model.MaxIter || diff < Model.ϵ) 
             break
         end
     end
 
 end
 
+function UpdateModelParameters(Item, Person, η, Model; debug = false)
+    if debug
+        Item = copy(Item) # only use in debugging
+    end
+    J = size(Model.y, 2)
+    for j in 1:J
+        # println("Item ", j)
+        # println("Update β")
+        res_β₀ = Optim.optimize(x -> loglikelihood_β(Person.τ, x, Item.β[j,:], Item.λ[j,:], Item.ζ[j,:], Person.μ, Model.y[:,j], Model.X), Item.β₀[j]-1.0, Item.β₀[j]+1.0, Brent())
+        Item.β₀[j] = res_β₀.minimizer[1]
+        if !isnothing(Model.X)
+            res_β = Optim.optimize(x -> loglikelihood_β(Person.τ, Item.β₀[j], x, Item.λ[j,:], Item.ζ[j,:], Person.μ, Model.y[:,j], Model.X), Item.β[j,:], BFGS(); autodiff = :forward)
+            Item.β[j,:] = res_β.minimizer[:]
+        end
+        # println("Update ζ")
+        # (impose proper constraints not to reverse the adjacent category boundary parameters.)
+        update_location = -Inf .< Item.ζ[j,:] .< Inf
+        _ζ = Item.ζ[j, update_location]
+        # temporary constraints
+        lower = [-Inf            ; _ζ[1:end-1] .* 0.9]
+        upper = [_ζ[2:end] .* 0.9; Inf]
+        try
+            res_ζ = Optim.optimize(x -> loglikelihood_ζ(x, η[:,j], Model.y[:,j]), lower, upper, _ζ, Fminbox(LBFGS()); autodiff = :forward)
+            Item.ζ[j, update_location] = res_ζ.minimizer[:]
+        catch
+            @warn "Failed to Optimize in Item $j"
+        finally
+            Item
+        end
+        # println("Update λ")
+        res_λ = Optim.optimize(x -> loglikelihood_λ(Person.τ, Item.β₀[j], Item.β[j,:], x, Item.ζ[j,:], Person.μ, Person.Σ, Model.y[:,j], Model.X), Item.λ[j, :], LBFGS(); autodiff = :forward)
+        Item.λ[j,:] = res_λ.minimizer[:]
+    end
+    return Item
+end
+
+function UpdateVariatinalParameters
+    #
+end
