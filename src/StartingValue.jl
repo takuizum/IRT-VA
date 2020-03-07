@@ -17,6 +17,7 @@ Base.copy(s::PersonParameters) = PersonParameters(copy(s.τ), copy(s.μ), copy(s
 using DataFrames, Distributions, CategoricalArrays, Random, OrdinalMultinomialModels, LinearAlgebra, Statistics
 
 function CalcStartingValues(y, Numθ; X = nothing)
+    println("Predict starting parameters")
     N, p = size(y)
     if isnothing(X)
         NumCovariates = 0
@@ -45,7 +46,7 @@ function CalcStartingValues(y, Numθ; X = nothing)
     ζ[:, 1] .= -Inf
     D = 1/1.702
     for j in 1:p
-        println("Item", j)
+        print("Item", j, "\r")
         # Logit Link, which is used in `polr` to fit orderd regression analysis, is more stable than ProbitLink in my experience.
         Kⱼ = length(unique(y[:, j]))
         if isnothing(X)

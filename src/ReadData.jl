@@ -31,3 +31,14 @@ oldPerson.Σ[1,:,:]
 newPerson.Σ[1,:,:]
 oldPerson.μ[1]
 newPerson.μ[1]
+
+# Update the both of parameters
+mod = GradedModel(grat[!, Not(:ID)]; MaxIter = 10, d = 3)
+item, person = gradedVA(mod)
+
+@show item.β₀
+@show item.λ
+item.ζ
+
+histogram(person.μ; nbins = 50)
+person.Σ
