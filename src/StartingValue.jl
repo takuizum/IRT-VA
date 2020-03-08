@@ -30,8 +30,8 @@ function CalcStartingValues(y, Numθ; X = nothing)
     rs = sum(y; dims = 2)[:]
     len_uni = length(unique(rs))
     rs = levelcode.(CategoricalArray(rs, ordered = true)) # ranking of raw score
-    sortperm(rs)
-    μ = range(-3, stop = 3, length = len_uni)[rs]
+    # sortperm(rs)
+    μ = range(3, stop = -3, length = len_uni)[rs]
     if Numθ > 1
         μ = hcat(μ, rand(MvNormal(ones(Numθ-1)), length(μ))')
     end

@@ -18,11 +18,11 @@ function gradedVA(Model::GradedModel)
     # N, J = size(Model.y)
     for iter in 1:Model.MaxIter
         println("Updating parameters...", iter)
+        # update τ and μ
+        UpdateVariationalParameters(newItem, newPerson, Model)
         η = CalcEta(newItem, newPerson, Model.X)
         # Update the item parameters
         UpdateModelParameters(newItem, newPerson, η, Model)
-        # update τ and μ
-        UpdateVariationalParameters(newItem, newPerson, Model)
         # if(diff < Model.ϵ)
         #     break
         # end
@@ -55,7 +55,7 @@ function UpdateModelParameters(Item, Person, η, Model; debug = false)
             res_ζ = Optim.optimize(x -> loglikelihood_ζ(x, η[:,j], Model.y[:,j]), lower, upper, _ζ, Fminbox(LBFGS()); autodiff = :forward)
             Item.ζ[j, update_location] = res_ζ.minimizer[:]
         catch
-            @warn "Failed to Optimize in Item $j"
+            @warn "Failed to optimize ζ in Item $j"
         finally
             Item
         end
@@ -76,8 +76,10 @@ function UpdateVariationalParameters(Item::ItemParameters, Person::PersonParamet
     # Update
     for i in 1:N
         Person.μ[i,:] = Optim.optimize(x -> loglikelihood_μ(Person.τ[i], Item.β₀, Item.β, Item.λ, Item.ζ, x, Person.Σ[i,:,:], Model.y[i,:], Model.X), Person.μ[i,:], BFGS()).minimizer
-        Person.Σ[i,:,:] = diagm(Model.d, Model.d, ones(Float64, Model.d))# inv(diagm(Model.d, Model.d, ones(Float64, Model.d)) + λλ)
+        Person.Σ[i,:,:] = inv(diagm(Model.d, Model.d, ones(Float64, Model.d)) + λλ)
     end
     # Constraints
-    Person.μ = zscore(Person.μ)
+    for d in 1:Model.d
+        Person.μ[:, d] = zscore(Person.μ[:, d])
+    end
 end
