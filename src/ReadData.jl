@@ -8,7 +8,7 @@ rename!(grat, :UNNAMED_1 => :ID)
 y = grat[!, Not(:ID)]
 X = nothing
 # CreateModel
-model = GradedModel(y)
+model = GradedModel(y; d = 3)
 
 # Initial values
 oldItem, oldPerson = CalcStartingValues(model.y, model.d);
@@ -33,12 +33,18 @@ oldPerson.μ[1]
 newPerson.μ[1]
 
 # Update the both of parameters
-mod = GradedModel(grat[!, Not(:ID)]; MaxIter = 10, d = 3)
-item, person = gradedVA(mod)
+mod = GradedModel(grat[!, Not(:ID)]; MaxIter = 20, d = 3)
+item, person = gradedVA(mod);
 
-@show item.β₀
-@show item.λ
+item.β₀
+item.λ .* 1.702
 item.ζ
 
 histogram(person.μ; nbins = 50)
+first(person.μ)
+using CSV
+CSV.write("data/va_theta.csv", DataFrame(person.μ))
+CSV.write("data/va_theta_init.csv", DataFrame(oldPerson.μ))
 person.Σ
+
+map(i -> zscore(person.μ[:,i]), 1:size(person.μ, 2))
