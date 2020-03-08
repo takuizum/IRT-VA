@@ -65,11 +65,12 @@ end
 function ∂loglikelihood_ζ(ζ, η, y)
     N = size(y, 1)
     ζ = [-Inf; ζ; Inf]
-    ∂lnp = zero(eltype(η))
+    ∂lnp = zeros(eltype(η), length(ζ)+2)
     for i in 1:N
-        ∂lnp += ∂pmf(η[i], ζ, y[i])
+        ∂lnp[y[i]+1] += ∂pmf(η[i], ζ, y[i])
+        ∂lnp[y[i]] -= ∂pmf(η[i], ζ, y[i]-1)
     end
-    return -∂lnp
+    return -∂lnp[2:end-1]
 end
 
 function loglikelihood_μ(τ, β₀, β, λ, ζ, μ, Σ, y, X)
