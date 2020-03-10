@@ -40,6 +40,10 @@ item.β₀
 item.λ .* 1.702
 item.ζ
 
+CSV.write("data/vs_zeta.csv", DataFrame(item.ζ))
+CSV.write("data/vs_lambda.csv", DataFrame(item.λ))
+CSV.write("data/vs_beta0.csv", DataFrame(β = item.β₀))
+
 histogram(person.μ; nbins = 50)
 first(person.μ)
 using CSV

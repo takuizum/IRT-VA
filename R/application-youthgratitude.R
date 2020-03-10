@@ -43,8 +43,9 @@ fit.va$zeta
 fit.va$lvs # thetaのスケールを固定できない...
 
 library(mirt)
-fit <- mirt(grat, 3)
-coef(fit)
+fit <- mirt(grat, 3, method = "MHRM")
+item <- coef(fit, simplify = TRUE)$item
 theta <- fscores(fit)
 head(theta)
-write.csv(theta, "data/mirt_theta.csv")
+write.csv(item, "data/mirt_mhrm_para.csv")
+write.csv(theta, "data/mirt_mhrm_theta.csv")
