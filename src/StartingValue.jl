@@ -44,6 +44,7 @@ function CalcStartingValues(y, Numθ; X = nothing)
     ζ = zeros(Float64, p, max_v+1)
     ζ[:, 1] .= -Inf
     D = 1/1.702
+    n_const = 0
     for j in 1:p
         print("Item", j, "\r")
         # Logit Link, which is used in `polr` to fit orderd regression analysis, is more stable than ProbitLink in my experience.
@@ -58,6 +59,10 @@ function CalcStartingValues(y, Numθ; X = nothing)
         end
         β₀[j] = plfit.β[1] .* D
         λ[j, :] .= plfit.β .* D
+        if Numθ > 1 && j > p - Numθ + 1
+            n_const += 1
+            λ[j,(Numθ - n_const):Numθ] .= 0.0
+        end
         ζ[j, 2:Kⱼ] .= plfit.θ .* D #  .- mean(plfit.θ)
         ζ[j, Kⱼ+1:max_v+1] .= Inf
     end

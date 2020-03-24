@@ -35,6 +35,7 @@ function UpdateModelParameters(Item, Person, η, Model; debug = false)
         Item = copy(Item) # only use in debugging
     end
     J = size(Model.y, 2)
+    n_const = 0
     for j in 1:J
         # println("Item ", j)
         # println("Update β")
@@ -49,8 +50,8 @@ function UpdateModelParameters(Item, Person, η, Model; debug = false)
         update_location = -Inf .< Item.ζ[j,:] .< Inf
         _ζ = Item.ζ[j, update_location]
         # temporary constraints
-        lower = [-Inf            ; _ζ[1:end-1] .* 0.9]
-        upper = [_ζ[2:end] .* 0.9; Inf]
+        lower = [-Inf     ; _ζ[1:end-1]]
+        upper = [_ζ[2:end]; Inf]
         try
             res_ζ = Optim.optimize(x -> loglikelihood_ζ(x, η[:,j], Model.y[:,j]), lower, upper, _ζ, Fminbox(LBFGS()); autodiff = :forward)
             Item.ζ[j, update_location] = res_ζ.minimizer[:]
@@ -60,8 +61,16 @@ function UpdateModelParameters(Item, Person, η, Model; debug = false)
             Item
         end
         # println("Update λ")
-        res_λ = Optim.optimize(x -> loglikelihood_λ(Person.τ, Item.β₀[j], Item.β[j,:], x, Item.ζ[j,:], Person.μ, Person.Σ, Model.y[:,j], Model.X), Item.λ[j, :], LBFGS(); autodiff = :forward)
-        Item.λ[j,:] = res_λ.minimizer[:]
+        if model.d > 1 && j > J - d + 1
+            n_const += 1
+            res_λ = Optim.optimize(x -> loglikelihood_λ(Person.τ, Item.β₀[j], Item.β[j,:], [x; fill(0.0, Model.d - length(x))], Item.ζ[j,:], Person.μ, Person.Σ, Model.y[:,j], Model.X), Item.λ[j, 1:Model.d - n_const], LBFGS(); autodiff = :forward)
+            Item.λ[j,:] = res_λ.minimizer[:]
+
+        else
+            res_λ = Optim.optimize(x -> loglikelihood_λ(Person.τ, Item.β₀[j], Item.β[j,:], x, Item.ζ[j,:], Person.μ, Person.Σ, Model.y[:,j], Model.X), Item.λ[j, :], LBFGS(); autodiff = :forward)
+            Item.λ[j,:] = res_λ.minimizer[:]
+        end
+
     end
     return Item
 end
