@@ -1,7 +1,8 @@
 using TableReader, DataFrames
 using Plots
 
-include.("src/" .* ["LogLikelihood.jl", "StartingValue.jl", "unstractured.jl", "CalcEta.jl", "QuadTerm.jl"])
+include.("src/" .* ["LogLikelihood.jl", "StartingValue.jl", "unstractured.jl", "CalcEta.jl", "QuadTerm.jl"]);
+include.(["LogLikelihood.jl", "StartingValue.jl", "unstractured.jl", "CalcEta.jl", "QuadTerm.jl"]);
 
 grat = readcsv("data/grat.csv")
 rename!(grat, :UNNAMED_1 => :ID)
