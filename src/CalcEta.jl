@@ -3,6 +3,7 @@ function _CalcEta(τ, β₀, β, λ, ζ::AbstractArray{Float64, 2}, μ::Abstract
     J = size(ζ, 1)
     N = size(μ, 1)
     # Calc eta
+    η = AbstractArray{Float64, 2}(undef, J, N)
     η = isnothing(X) ? λ*μ' : β*X' + λ*μ'
     for j in 1:J, i in 1:N
         η[j, i] += τ[i] + β₀[j]
@@ -14,6 +15,7 @@ end
 function _CalcEta(τ, β₀, β, λ, ζ::AbstractArray{Float64, 1}, μ::AbstractArray{Float64, 2}, X)
     N = size(μ, 1)
     # Calc eta
+    η = AbstractArray{Float64, 1}(undef, N)
     η = isnothing(X) ? μ*λ : β*X' + μ*λ
     for i in 1:N
         η[i] += τ[i] + β₀
@@ -25,6 +27,7 @@ end
 function _CalcEta(τ::Float64, β₀, β, λ, ζ::AbstractArray{Float64, 2}, μ, X)
     J = size(ζ, 1)
     # Calc eta
+    η = AbstractArray{Float64, 1}(undef, J)
     η = isnothing(X) ? λ*μ : β*X' + λ*μ
     for j in 1:J
         η[j] += τ + β₀[j]

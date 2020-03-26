@@ -9,7 +9,7 @@ rename!(grat, :UNNAMED_1 => :ID)
 y = grat[!, Not(:ID)]
 X = nothing
 # CreateModel
-model = GradedModel(y; d = 3)
+model = GradedModel(y; d = 3);
 
 # Initial values
 oldItem, oldPerson = CalcStartingValues(model.y, model.d);
@@ -34,7 +34,7 @@ oldPerson.μ[1]
 newPerson.μ[1]
 
 # Update the both of parameters
-mod = GradedModel(grat[!, Not(:ID)]; MaxIter = 20, d = 3)
+mod = GradedModel(grat[!, Not(:ID)]; MaxIter = 50, d = 3);
 item, person = gradedVA(mod);
 
 item.β₀
@@ -50,6 +50,14 @@ first(person.μ)
 using CSV
 CSV.write("data/va_theta.csv", DataFrame(person.μ))
 CSV.write("data/va_theta_init.csv", DataFrame(oldPerson.μ))
-person.Σ
+person.μ
+person.Σ[1, :, :]
 
 map(i -> zscore(person.μ[:,i]), 1:size(person.μ, 2))
+
+
+# Code optimization
+grat2 = grat[!, Not(:ID)];
+@code_warntype GradedModel(grat2; MaxIter = 2, d = 3);
+mod = GradedModel(grat2; MaxIter = 10, d = 3);
+@code_warntype gradedVA(mod);

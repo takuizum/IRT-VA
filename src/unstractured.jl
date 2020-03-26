@@ -1,31 +1,43 @@
-struct GradedModel
-    y
-    X
-    d
+abstract type GradedModel end
+struct GradedModels <: GradedModel
+    y::AbstractArray
+    X::AbstractArray
+    d::Int64
     MaxIter::Int64
     RowEffect::Bool
     ϵ
 end
 function GradedModel(y; d = 1, X = nothing, MaxIter = 100, RowEffect = true, ϵ = 1e-3)
-    GradedModel(y, X, d, MaxIter, RowEffect, ϵ)
+    GradedModels(y, X, d, MaxIter, RowEffect, ϵ)
 end
 
 function gradedVA(Model::GradedModel)
     #Starting values
-    oldItem, oldPerson = CalcStartingValues(Model.y, Model.d);
-    newItem, newPerson = copy.([oldItem, oldPerson])
+    newItem, newPerson = CalcStartingValues(Model.y, Model.d);
+    # oldItem, oldPerson = copy.([newItem, newPerson])
     # Initialize
-    # N, J = size(Model.y)
+    old_loglik = zero(Float64)
+    old_loglik = loglikelihood(Model, newItem, newPerson)
+    new_loglik = copy(old_loglik)
+    # η = AbstractArray{Float64}(undef, N, J)
     for iter in 1:Model.MaxIter
         println("Updating parameters...", iter)
         # update τ and μ
-        UpdateVariationalParameters(newItem, newPerson, Model)
+        if iter < 20
+            UpdateVariationalParameters(newItem, newPerson, Model, false)
+        else
+            UpdateVariationalParameters(newItem, newPerson, Model, true)
+        end
         η = CalcEta(newItem, newPerson, Model.X)
         # Update the item parameters
         UpdateModelParameters(newItem, newPerson, η, Model)
         # if(diff < Model.ϵ)
         #     break
         # end
+        # Evaluate Log Likelihood
+        new_loglik = loglikelihood(Model, newItem, newPerson)
+        println("<Old LogLikelihood : $old_loglik >\n<New LogLikelihood : $new_loglik>\n<The ratio : $(new_loglik/old_loglik)>")
+        old_loglik = copy(new_loglik)
     end
     return newItem, newPerson
 end
@@ -61,11 +73,11 @@ function UpdateModelParameters(Item, Person, η, Model; debug = false)
             Item
         end
         # println("Update λ")
-        if model.d > 1 && j > J - d + 1
+        if model.d > 1 && j > J - Model.d + 1
+            # Item.λ[j,(Model.d - n_const):Model.d] .= 0.0
             n_const += 1
             res_λ = Optim.optimize(x -> loglikelihood_λ(Person.τ, Item.β₀[j], Item.β[j,:], [x; fill(0.0, Model.d - length(x))], Item.ζ[j,:], Person.μ, Person.Σ, Model.y[:,j], Model.X), Item.λ[j, 1:Model.d - n_const], LBFGS(); autodiff = :forward)
-            Item.λ[j,:] = res_λ.minimizer[:]
-
+            Item.λ[j,1:Model.d - n_const] = res_λ.minimizer[:]
         else
             res_λ = Optim.optimize(x -> loglikelihood_λ(Person.τ, Item.β₀[j], Item.β[j,:], x, Item.ζ[j,:], Person.μ, Person.Σ, Model.y[:,j], Model.X), Item.λ[j, :], LBFGS(); autodiff = :forward)
             Item.λ[j,:] = res_λ.minimizer[:]
@@ -75,7 +87,7 @@ function UpdateModelParameters(Item, Person, η, Model; debug = false)
     return Item
 end
 
-function UpdateVariationalParameters(Item::ItemParameters, Person::PersonParameters, Model::GradedModel)
+function UpdateVariationalParameters(Item::ItemParameters, Person::PersonParameters, Model::GradedModel, update_Σ::Bool)
     N, J = size(Model.y)
     # λ square term
     λλ = zeros(eltype(Item.λ), Model.d, Model.d)
@@ -85,7 +97,9 @@ function UpdateVariationalParameters(Item::ItemParameters, Person::PersonParamet
     # Update
     for i in 1:N
         Person.μ[i,:] = Optim.optimize(x -> loglikelihood_μ(Person.τ[i], Item.β₀, Item.β, Item.λ, Item.ζ, x, Person.Σ[i,:,:], Model.y[i,:], Model.X), Person.μ[i,:], BFGS()).minimizer
-        Person.Σ[i,:,:] = inv(diagm(Model.d, Model.d, ones(Float64, Model.d)) + λλ)
+        if update_Σ
+            Person.Σ[i,:,:] = inv(diagm(Model.d, Model.d, ones(Float64, Model.d)) + λλ)
+        end
     end
     # Constraints
     for d in 1:Model.d

@@ -13,15 +13,16 @@ using Optim, Distributions, StatsFuns, StatsBase, CategoricalArrays, Random, Ord
 pmf(η, ζ, k) = cdf(Normal(0,1), ζ[k+1] - η) - cdf(Normal(0,1), ζ[k] - η)
 ∂pmf(η, ζ, k) = (pdf(Normal(0, 1), ζ[k+1] - η) - pdf(Normal(0, 1), ζ[k] - η)) / pmf(η, ζ, k)
 
-function loglikelihood(λ, ζ, η, μ, Σ, y)
-    N, J = size(η)
+function loglikelihood(Model, Item, Person)
+    N, J = size(Model.y)
+    η = CalcEta(Item, Person, Model.X)
     # Calc Loglikelihood
-    lnp = 0.0
+    lnp = zero(Float64)
     for j in 1:J, i in 1:N
-        lnp += log(pmf(η[i, j], ζ[j,:], y[i, j]))
+        lnp += log(pmf(η[i, j], Item.ζ[j,:], Model.y[i, j]))
     end
     # Calc quad term
-    lnp += _QuadTerm(λ, Σ, μ)
+    lnp += _QuadTerm(Item.λ, Person.Σ, Person.μ)
     return lnp
 end
 

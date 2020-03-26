@@ -1,11 +1,13 @@
-mutable struct ItemParameters
+abstract type ItemParameter end
+abstract type PersonParameter end
+mutable struct ItemParameters <: ItemParameter
     β₀
     β
     ζ
     λ
 end
 
-mutable struct PersonParameters
+mutable struct PersonParameters <: PersonParameter
     τ
     μ
     Σ
@@ -31,6 +33,7 @@ function CalcStartingValues(y, Numθ; X = nothing)
     len_uni = length(unique(rs))
     rs = levelcode.(CategoricalArray(rs, ordered = true)) # ranking of raw score
     μ = range(3, stop = -3, length = len_uni)[rs]
+    Random.seed!(0204)
     if Numθ > 1
         μ = hcat(μ, rand(MvNormal(ones(Numθ-1)), length(μ))')
     end
